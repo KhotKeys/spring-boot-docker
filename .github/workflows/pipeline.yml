@@ -1,10 +1,10 @@
-name: CI/CD Pipeline
+﻿name: CI/CD Pipeline
 on:
   push:
     branches:
       - master
   workflow_dispatch:
-    
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,7 +25,8 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.ECR_REPO }}:latest .
+          # Dockerfile lives in the src directory in this repo
+          docker build -t ${{ secrets.ECR_REPO }}:latest -f src/Dockerfile src
 
       - name: Push Docker Image to Amazon ECR
         run: |
