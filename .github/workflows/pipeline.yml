@@ -71,6 +71,19 @@ jobs:
     needs: build
     timeout-minutes: 10
     steps:
+      - name: Validate deploy secrets
+        run: |
+          echo "Validating required deploy secrets..."
+          if [ -z "${{ secrets.ECS_HOST }}" ]; then
+            echo "ERROR: Missing required secret ECS_HOST. Set repository secret 'ECS_HOST' to your target host (IP or DNS)." >&2
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY_EC2 }}" ]; then
+            echo "ERROR: Missing required secret SSH_PRIVATE_KEY_EC2. Set repository secret with your private key for SSH." >&2
+            exit 1
+          fi
+          echo "Secrets look present (masked). Proceeding to deploy..."
+
       - name: Deploy via SSH to ECS (with diagnostics)
         uses: appleboy/ssh-action@v1.2.0
         with:
