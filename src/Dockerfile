@@ -4,6 +4,8 @@ WORKDIR /build
 COPY ./pom.xml ./
 COPY ./src ./src
 
+RUN java -version || true
+RUN mvn -v || true
 RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:21-jre
