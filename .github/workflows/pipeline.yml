@@ -72,17 +72,24 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Validate deploy secrets
+        id: validate
         run: |
           echo "Validating required deploy secrets..."
+          SKIP="false"
           if [ -z "${{ secrets.ECS_HOST }}" ]; then
-            echo "ERROR: Missing required secret ECS_HOST. Set repository secret 'ECS_HOST' to your target host (IP or DNS)." >&2
-            exit 1
+            echo "ECS_HOST is missing; SSH deploy will be skipped." >&2
+            SKIP="true"
           fi
           if [ -z "${{ secrets.SSH_PRIVATE_KEY_EC2 }}" ]; then
-            echo "ERROR: Missing required secret SSH_PRIVATE_KEY_EC2. Set repository secret with your private key for SSH." >&2
-            exit 1
+            echo "SSH_PRIVATE_KEY_EC2 is missing; SSH deploy will be skipped." >&2
+            SKIP="true"
           fi
-          echo "Secrets look present (masked). Proceeding to deploy..."
+          echo "skip=$SKIP" >> $GITHUB_OUTPUT
+          if [ "$SKIP" = "false" ]; then
+            echo "Secrets look present (masked). Proceeding to deploy..."
+          else
+            echo "Skipping SSH deploy due to missing secrets. If you intended a production deploy, set ECS_HOST and SSH_PRIVATE_KEY_EC2 or switch to an AWS ECS deploy method." >&2
+          fi
 
       - name: Sanitize ECS_HOST (strip http(s)://)
         id: sanitize-host
@@ -101,6 +108,7 @@ jobs:
           echo "host=$HOST" >> $GITHUB_OUTPUT
 
       - name: Deploy via SSH to ECS (with diagnostics)
+        if: ${{ steps.validate.outputs.skip != 'true' }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ steps.sanitize-host.outputs.host }}
