@@ -1,4 +1,5 @@
-name: CI/CD Pipeline
+﻿name: CI/CD Pipeline
+
 on:
   push:
     branches:
@@ -7,6 +8,7 @@ on:
 
 jobs:
   build:
+    name: Build and push to ECR
     runs-on: ubuntu-latest
 
     steps:
@@ -18,17 +20,29 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build Docker Image
+      - name: Ensure ECR repository exists
         run: |
-          # Dockerfile lives in the src directory in this repo
-          # Use repo root as build context so Docker can COPY pom.xml and src/
-          docker build -t ${{ secrets.ECR_REPO }}:latest -f src/Dockerfile .
+          set -e
+          REPO=${{ secrets.REPOSITORY_NAME }}
+          REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          echo "Checking for ECR repository: $REPO"
+          aws ecr describe-repositories --repository-names "$REPO" >/dev/null 2>&1 || \
+            aws ecr create-repository --repository-name "$REPO" --image-scanning-configuration scanOnPush=true || true
 
-      - name: Push Docker Image to Amazon ECR
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: src/Dockerfile
+          push: true
+          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.REPOSITORY_NAME }}:latest
+
+      - name: Output pushed image
         run: |
-          docker push ${{ secrets.ECR_REPO }}:latest
+          echo "Pushed image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.REPOSITORY_NAME }}:latest"
