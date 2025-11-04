@@ -76,8 +76,8 @@ jobs:
         run: |
           echo "Validating required deploy secrets..."
           SKIP="false"
-          if [ -z "${{ secrets.ECS_HOST }}" ]; then
-            echo "ECS_HOST is missing; SSH deploy will be skipped." >&2
+          if [ -z "${{ secrets.EC2_HOST }}" ]; then
+            echo "EC2_HOST is missing; SSH deploy will be skipped." >&2
             SKIP="true"
           fi
           if [ -z "${{ secrets.SSH_PRIVATE_KEY_EC2 }}" ]; then
@@ -91,11 +91,11 @@ jobs:
             echo "Skipping SSH deploy due to missing secrets. If you intended a production deploy, set ECS_HOST and SSH_PRIVATE_KEY_EC2 or switch to an AWS ECS deploy method." >&2
           fi
 
-      - name: Sanitize ECS_HOST (strip http(s)://)
+      - name: Sanitize EC2_HOST (strip http(s)://)
         id: sanitize-host
         run: |
           set -euo pipefail
-          RAW_HOST="${{ secrets.ECS_HOST }}"
+          RAW_HOST="${{ secrets.EC2_HOST }}"
           # strip protocol and trailing slash
           HOST="${RAW_HOST#http://}"
           HOST="${HOST#https://}"
