@@ -84,10 +84,26 @@ jobs:
           fi
           echo "Secrets look present (masked). Proceeding to deploy..."
 
+      - name: Sanitize ECS_HOST (strip http(s)://)
+        id: sanitize-host
+        run: |
+          set -euo pipefail
+          RAW_HOST="${{ secrets.ECS_HOST }}"
+          # strip protocol and trailing slash
+          HOST="${RAW_HOST#http://}"
+          HOST="${HOST#https://}"
+          HOST="${HOST%/}"
+          if [ -z "$HOST" ]; then
+            echo "host=" >> $GITHUB_OUTPUT
+            echo "WARNING: ECS_HOST sanitized to empty string" >&2
+            exit 0
+          fi
+          echo "host=$HOST" >> $GITHUB_OUTPUT
+
       - name: Deploy via SSH to ECS (with diagnostics)
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.ECS_HOST }}
+          host: ${{ steps.sanitize-host.outputs.host }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY_EC2 }}
           script: |
